@@ -20,7 +20,7 @@ export default function App() {
     console.log(result); // Log the result object
 
     if (!result.canceled && result.assets.length > 0) {
-      setVideoFiles([...videoFiles, result.assets[0].uri]);
+      setVideoFiles([...videoFiles, result.assets[0]]);
     }
   };
 
@@ -34,10 +34,13 @@ export default function App() {
       return null; // Avoid rendering if item is undefined
     }
 
+    // Extract the file name from the URI or use fileName if available
+    const fileName = item.fileName || item.uri.split('/').pop() || 'Unknown File';
+
     return (
       <View style={styles.videoItem}>
         <Video
-          source={{ uri: item }}
+          source={{ uri: item.uri }}
           rate={1.0}
           volume={1.0}
           isMuted={true}
@@ -45,7 +48,7 @@ export default function App() {
           shouldPlay={false}
           style={styles.thumbnail}
         />
-        <Text>{item.split('/').pop()}</Text>
+        <Text style={styles.fileName}>{decodeURI(fileName)}</Text>
       </View>
     );
   };
@@ -55,7 +58,7 @@ export default function App() {
       <Text style={styles.header}>Video Converter App</Text>
       <Button title="Add Videos" onPress={pickVideo} />
       <FlatList
-        data={videoFiles.filter(Boolean)} // Filter out any undefined or null values
+        data={videoFiles}
         renderItem={renderItem}
         keyExtractor={(item, index) => index.toString()}
         style={styles.list}
@@ -97,6 +100,10 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     marginRight: 10,
+  },
+  fileName: {
+    fontSize: 16,
+    marginLeft: 10, // Adjust margin as needed
   },
   convertButton: {
     backgroundColor: '#007BFF',
