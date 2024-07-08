@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, View, Button, FlatList, TouchableOpacity } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import { Video } from 'expo-av';
 
 export default function App() {
   const [videoFiles, setVideoFiles] = useState([]);
@@ -16,8 +17,10 @@ export default function App() {
       mediaTypes: ImagePicker.MediaTypeOptions.Videos,
     });
 
-    if (!result.canceled) {
-      setVideoFiles([...videoFiles, result.uri]);
+    console.log(result); // Log the result object
+
+    if (!result.canceled && result.assets.length > 0) {
+      setVideoFiles([...videoFiles, result.assets[0].uri]);
     }
   };
 
@@ -26,18 +29,33 @@ export default function App() {
     alert('Convert button pressed!');
   };
 
-  const renderItem = ({ item }) => (
-    <View style={styles.videoItem}>
-      <Text>{item.split('/').pop()}</Text>
-    </View>
-  );
+  const renderItem = ({ item }) => {
+    if (!item) {
+      return null; // Avoid rendering if item is undefined
+    }
+
+    return (
+      <View style={styles.videoItem}>
+        <Video
+          source={{ uri: item }}
+          rate={1.0}
+          volume={1.0}
+          isMuted={true}
+          resizeMode="cover"
+          shouldPlay={false}
+          style={styles.thumbnail}
+        />
+        <Text>{item.split('/').pop()}</Text>
+      </View>
+    );
+  };
 
   return (
     <View style={styles.container}>
       <Text style={styles.header}>Video Converter App</Text>
       <Button title="Add Videos" onPress={pickVideo} />
       <FlatList
-        data={videoFiles}
+        data={videoFiles.filter(Boolean)} // Filter out any undefined or null values
         renderItem={renderItem}
         keyExtractor={(item, index) => index.toString()}
         style={styles.list}
@@ -72,6 +90,13 @@ const styles = StyleSheet.create({
     padding: 10,
     borderBottomColor: '#ccc',
     borderBottomWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  thumbnail: {
+    width: 100,
+    height: 100,
+    marginRight: 10,
   },
   convertButton: {
     backgroundColor: '#007BFF',
