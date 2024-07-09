@@ -90,16 +90,16 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   videoItem: {
-    padding: 10,
+    padding: 5,
     borderBottomColor: '#ccc',
-    borderBottomWidth: 1,
+    borderBottomWidth: .7,
     flexDirection: 'row',
     alignItems: 'center',
   },
   thumbnail: {
-    width: 100,
-    height: 100,
-    marginRight: 10,
+    width: 70,
+    height: 70,
+    marginRight: 3,
   },
   fileName: {
     fontSize: 16,
