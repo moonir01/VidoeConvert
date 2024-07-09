@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, FlatList, TouchableOpacity } from 'react-native';
+import { StyleSheet, Text, View, FlatList, TouchableOpacity, Alert } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Video } from 'expo-av';
 import { MaterialIcons } from '@expo/vector-icons'; // Import MaterialIcons
@@ -22,7 +22,15 @@ export default function App() {
     console.log(result); // Log the result object
 
     if (!result.canceled && result.assets.length > 0) {
-      setVideoFiles([...videoFiles, ...result.assets]);
+      const newFiles = result.assets.filter(
+        (newFile) => !videoFiles.some((existingFile) => existingFile.uri === newFile.uri)
+      );
+
+      if (newFiles.length < result.assets.length) {
+        Alert.alert('Duplicate Files', 'Some files were already added.');
+      }
+
+      setVideoFiles([...videoFiles, ...newFiles]);
     }
   };
 
@@ -33,6 +41,10 @@ export default function App() {
 
   const deleteVideo = (uri) => {
     setVideoFiles(videoFiles.filter((video) => video.uri !== uri));
+  };
+
+  const clearAllVideos = () => {
+    setVideoFiles([]);
   };
 
   const renderItem = ({ item }) => {
@@ -68,6 +80,14 @@ export default function App() {
       <TouchableOpacity style={styles.addButton} onPress={pickVideo}>
         <Text style={styles.addButtonText}>Select or Browse Videos</Text>
       </TouchableOpacity>
+      <View style={styles.headerContainer}>
+        <Text style={styles.videoCount}>Total Videos: {videoFiles.length}</Text>
+        {videoFiles.length > 0 && (
+          <TouchableOpacity onPress={clearAllVideos}>
+            <Text style={styles.clearAllText}>Clear All</Text>
+          </TouchableOpacity>
+        )}
+      </View>
       <FlatList
         data={videoFiles}
         renderItem={renderItem}
@@ -116,6 +136,21 @@ const styles = StyleSheet.create({
     textShadowColor: '#000',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 5,
+  },
+  headerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginBottom: 10,
+  },
+  videoCount: {
+    fontSize: 18,
+  },
+  clearAllText: {
+    fontSize: 16,
+    color: 'red',
+    textDecorationLine: 'underline',
   },
   list: {
     flex: 1,
