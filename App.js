@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, Button, FlatList, TouchableOpacity } from 'react-native';
+import { StyleSheet, Text, View, FlatList, TouchableOpacity } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Video } from 'expo-av';
+import { MaterialIcons } from '@expo/vector-icons'; // Import MaterialIcons
 
 export default function App() {
   const [videoFiles, setVideoFiles] = useState([]);
@@ -15,18 +16,23 @@ export default function App() {
 
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Videos,
+      allowsMultipleSelection: true, // Enable multi-file selection
     });
 
     console.log(result); // Log the result object
 
     if (!result.canceled && result.assets.length > 0) {
-      setVideoFiles([...videoFiles, result.assets[0]]);
+      setVideoFiles([...videoFiles, ...result.assets]);
     }
   };
 
   const convertVideos = () => {
     // Implement video conversion logic here
     alert('Convert button pressed!');
+  };
+
+  const deleteVideo = (uri) => {
+    setVideoFiles(videoFiles.filter((video) => video.uri !== uri));
   };
 
   const renderItem = ({ item }) => {
@@ -49,6 +55,9 @@ export default function App() {
           style={styles.thumbnail}
         />
         <Text style={styles.fileName}>{decodeURI(fileName)}</Text>
+        <TouchableOpacity onPress={() => deleteVideo(item.uri)} style={styles.deleteButton}>
+          <MaterialIcons name="delete" size={24} color="red" />
+        </TouchableOpacity>
       </View>
     );
   };
@@ -56,7 +65,9 @@ export default function App() {
   return (
     <View style={styles.container}>
       <Text style={styles.header}>Video Converter App</Text>
-      <Button title="Add Videos" onPress={pickVideo} />
+      <TouchableOpacity style={styles.addButton} onPress={pickVideo}>
+        <Text style={styles.addButtonText}>Select or Browse Videos</Text>
+      </TouchableOpacity>
       <FlatList
         data={videoFiles}
         renderItem={renderItem}
@@ -85,6 +96,27 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 20,
   },
+  addButton: {
+    backgroundColor: '#007BFF',
+    padding: 15,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginBottom: 20,
+    width: '100%',
+    elevation: 2, // Add elevation for Android
+    shadowColor: '#000', // Add shadow for iOS
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.8,
+    shadowRadius: 2,
+  },
+  addButtonText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+    textShadowColor: '#000',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 5,
+  },
   list: {
     flex: 1,
     width: '100%',
@@ -92,18 +124,22 @@ const styles = StyleSheet.create({
   videoItem: {
     padding: 5,
     borderBottomColor: '#ccc',
-    borderBottomWidth: .7,
+    borderBottomWidth: 0.7,
     flexDirection: 'row',
     alignItems: 'center',
   },
   thumbnail: {
     width: 70,
     height: 70,
-    marginRight: 3,
+    marginRight: 10,
   },
   fileName: {
     fontSize: 16,
     marginLeft: 10, // Adjust margin as needed
+    flex: 1,
+  },
+  deleteButton: {
+    marginLeft: 10,
   },
   convertButton: {
     backgroundColor: '#007BFF',
