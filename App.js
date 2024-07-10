@@ -85,7 +85,6 @@ export default function App() {
                 shouldPlay={false}
                 style={styles.thumbnailGrid}
               />
-              <Text style={styles.fileName}>{decodeURI(item.fileName || item.uri.split('/').pop() || 'Unknown File')}</Text>
               <TouchableOpacity onPress={() => deleteVideo(item.uri)} style={styles.deleteButton}>
                 <MaterialIcons name="delete" size={24} color="red" />
               </TouchableOpacity>
@@ -197,6 +196,10 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
     alignItems: 'center',
     margin: 10,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 8,
+    padding: 5,
   },
   thumbnail: {
     width: 70,
@@ -204,9 +207,9 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   thumbnailGrid: {
-    width:70 ,
-    height:70,
-    marginBottom: 10,
+    width: 70,
+    height: 70,
+    marginBottom:10,
   },
   fileName: {
     fontSize: 16,
