@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, FlatList, TouchableOpacity, Alert } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, Alert, Dimensions, ScrollView } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Video } from 'expo-av';
 import { MaterialIcons } from '@expo/vector-icons'; // Import MaterialIcons
 
+const windowWidth = Dimensions.get('window').width;
+
 export default function App() {
   const [videoFiles, setVideoFiles] = useState([]);
+  const [isGridView, setIsGridView] = useState(false); // State to track layout type
 
   const pickVideo = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -47,31 +50,8 @@ export default function App() {
     setVideoFiles([]);
   };
 
-  const renderItem = ({ item }) => {
-    if (!item) {
-      return null; // Avoid rendering if item is undefined
-    }
-
-    // Extract the file name from the URI or use fileName if available
-    const fileName = item.fileName || item.uri.split('/').pop() || 'Unknown File';
-
-    return (
-      <View style={styles.videoItem}>
-        <Video
-          source={{ uri: item.uri }}
-          rate={1.0}
-          volume={1.0}
-          isMuted={true}
-          resizeMode="cover"
-          shouldPlay={false}
-          style={styles.thumbnail}
-        />
-        <Text style={styles.fileName}>{decodeURI(fileName)}</Text>
-        <TouchableOpacity onPress={() => deleteVideo(item.uri)} style={styles.deleteButton}>
-          <MaterialIcons name="delete" size={24} color="red" />
-        </TouchableOpacity>
-      </View>
-    );
+  const toggleLayout = () => {
+    setIsGridView(!isGridView);
   };
 
   return (
@@ -83,17 +63,56 @@ export default function App() {
       <View style={styles.headerContainer}>
         <Text style={styles.videoCount}>Total Videos: {videoFiles.length}</Text>
         {videoFiles.length > 0 && (
-          <TouchableOpacity onPress={clearAllVideos}>
+          <TouchableOpacity onPress={clearAllVideos} style={styles.clearButtonContainer}>
+            <MaterialIcons name="clear" size={24} color="red" style={styles.clearIcon} />
             <Text style={styles.clearAllText}>Clear All</Text>
           </TouchableOpacity>
         )}
       </View>
-      <FlatList
-        data={videoFiles}
-        renderItem={renderItem}
-        keyExtractor={(item, index) => index.toString()}
-        style={styles.list}
-      />
+      <TouchableOpacity style={styles.toggleLayoutButton} onPress={toggleLayout}>
+        <MaterialIcons name={isGridView ? 'view-list' : 'view-module'} size={24} color="#fff" />
+      </TouchableOpacity>
+      {isGridView ? (
+        <ScrollView contentContainerStyle={styles.gridContainer}>
+          {videoFiles.map((item, index) => (
+            <View key={index} style={styles.videoItemGrid}>
+              <Video
+                source={{ uri: item.uri }}
+                rate={1.0}
+                volume={1.0}
+                isMuted={true}
+                resizeMode="cover"
+                shouldPlay={false}
+                style={styles.thumbnailGrid}
+              />
+              <Text style={styles.fileName}>{decodeURI(item.fileName || item.uri.split('/').pop() || 'Unknown File')}</Text>
+              <TouchableOpacity onPress={() => deleteVideo(item.uri)} style={styles.deleteButton}>
+                <MaterialIcons name="delete" size={24} color="red" />
+              </TouchableOpacity>
+            </View>
+          ))}
+        </ScrollView>
+      ) : (
+        <View style={styles.list}>
+          {videoFiles.map((item, index) => (
+            <View key={index} style={styles.videoItem}>
+              <Video
+                source={{ uri: item.uri }}
+                rate={1.0}
+                volume={1.0}
+                isMuted={true}
+                resizeMode="cover"
+                shouldPlay={false}
+                style={styles.thumbnail}
+              />
+              <Text style={styles.fileName}>{decodeURI(item.fileName || item.uri.split('/').pop() || 'Unknown File')}</Text>
+              <TouchableOpacity onPress={() => deleteVideo(item.uri)} style={styles.deleteButton}>
+                <MaterialIcons name="delete" size={24} color="red" />
+              </TouchableOpacity>
+            </View>
+          ))}
+        </View>
+      )}
       {videoFiles.length > 0 && (
         <TouchableOpacity style={styles.convertButton} onPress={convertVideos}>
           <Text style={styles.convertButtonText}>Convert</Text>
@@ -108,7 +127,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
     alignItems: 'center',
-    justifyContent: 'center',
     padding: 20,
   },
   header: {
@@ -144,10 +162,25 @@ const styles = StyleSheet.create({
   videoCount: {
     fontSize: 18,
   },
+  clearButtonContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  clearIcon: {
+    marginRight: 5,
+  },
   clearAllText: {
     fontSize: 16,
     color: 'red',
     textDecorationLine: 'underline',
+  },
+  toggleLayoutButton: {
+    backgroundColor: '#007BFF',
+    padding: 10,
+    borderRadius: 8,
+    marginBottom: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   list: {
     flex: 1,
@@ -160,14 +193,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
+  videoItemGrid: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    margin: 10,
+  },
   thumbnail: {
     width: 70,
     height: 70,
     marginRight: 10,
   },
+  thumbnailGrid: {
+    width:70 ,
+    height:70,
+    marginBottom: 10,
+  },
   fileName: {
     fontSize: 16,
-    marginLeft: 10, // Adjust margin as needed
+    marginLeft: 10,
     flex: 1,
   },
   deleteButton: {
@@ -185,5 +228,13 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  gridContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'flex-start',
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    width: '100%',
   },
 });
