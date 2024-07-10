@@ -1,10 +1,14 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, Alert, Dimensions, ScrollView } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, Alert, Dimensions, ScrollView, LayoutAnimation, UIManager, Platform } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Video } from 'expo-av';
 import { MaterialIcons } from '@expo/vector-icons'; // Import MaterialIcons
 
 const windowWidth = Dimensions.get('window').width;
+
+if (Platform.OS === 'android') {
+  UIManager.setLayoutAnimationEnabledExperimental && UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 export default function App() {
   const [videoFiles, setVideoFiles] = useState([]);
@@ -33,6 +37,7 @@ export default function App() {
         Alert.alert('Duplicate Files', 'Some files were already added.');
       }
 
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
       setVideoFiles([...videoFiles, ...newFiles]);
     }
   };
@@ -43,14 +48,17 @@ export default function App() {
   };
 
   const deleteVideo = (uri) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setVideoFiles(videoFiles.filter((video) => video.uri !== uri));
   };
 
   const clearAllVideos = () => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setVideoFiles([]);
   };
 
   const toggleLayout = () => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setIsGridView(!isGridView);
   };
 
@@ -63,15 +71,17 @@ export default function App() {
       <View style={styles.headerContainer}>
         <Text style={styles.videoCount}>Total Videos: {videoFiles.length}</Text>
         {videoFiles.length > 0 && (
-          <TouchableOpacity onPress={clearAllVideos} style={styles.clearButtonContainer}>
-            <MaterialIcons name="clear" size={24} color="red" style={styles.clearIcon} />
-            <Text style={styles.clearAllText}>Clear All</Text>
-          </TouchableOpacity>
+          <>
+            <TouchableOpacity onPress={clearAllVideos} style={styles.clearButtonContainer}>
+              <MaterialIcons name="clear" size={24} color="red" style={styles.clearIcon} />
+              <Text style={styles.clearAllText}>Clear All</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.toggleLayoutButton} onPress={toggleLayout}>
+              <MaterialIcons name={isGridView ? 'view-list' : 'view-module'} size={24} color="#fff" />
+            </TouchableOpacity>
+          </>
         )}
       </View>
-      <TouchableOpacity style={styles.toggleLayoutButton} onPress={toggleLayout}>
-        <MaterialIcons name={isGridView ? 'view-list' : 'view-module'} size={24} color="#fff" />
-      </TouchableOpacity>
       {isGridView ? (
         <ScrollView contentContainerStyle={styles.gridContainer}>
           {videoFiles.map((item, index) => (
@@ -85,7 +95,7 @@ export default function App() {
                 shouldPlay={false}
                 style={styles.thumbnailGrid}
               />
-              <TouchableOpacity onPress={() => deleteVideo(item.uri)} style={styles.deleteButton}>
+              <TouchableOpacity onPress={() => deleteVideo(item.uri)} style={styles.deleteButtonGrid}>
                 <MaterialIcons name="delete" size={24} color="red" />
               </TouchableOpacity>
             </View>
@@ -126,23 +136,23 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
     alignItems: 'center',
-    padding: 20,
+    padding: 10,
   },
   header: {
     fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 20,
+    marginBottom: 5,
   },
   addButton: {
     backgroundColor: '#007BFF',
     padding: 15,
     borderRadius: 10,
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 5,
     width: '100%',
     elevation: 2, // Add elevation for Android
     shadowColor: '#000', // Add shadow for iOS
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 5 },
     shadowOpacity: 0.8,
     shadowRadius: 2,
   },
@@ -164,6 +174,7 @@ const styles = StyleSheet.create({
   clearButtonContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginRight: 10,
   },
   clearIcon: {
     marginRight: 5,
@@ -175,9 +186,8 @@ const styles = StyleSheet.create({
   },
   toggleLayoutButton: {
     backgroundColor: '#007BFF',
-    padding: 10,
+    padding: 1,
     borderRadius: 8,
-    marginBottom: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -195,11 +205,12 @@ const styles = StyleSheet.create({
   videoItemGrid: {
     flexDirection: 'column',
     alignItems: 'center',
-    margin: 10,
+    margin: 4,
     borderWidth: 1,
     borderColor: '#ccc',
     borderRadius: 8,
-    padding: 5,
+    padding: 2,
+    position: 'relative',
   },
   thumbnail: {
     width: 70,
@@ -207,9 +218,9 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   thumbnailGrid: {
-    width: 70,
-    height: 70,
-    marginBottom:10,
+    width: 80,
+    height: 80,
+    marginBottom: 0,
   },
   fileName: {
     fontSize: 16,
@@ -217,7 +228,15 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   deleteButton: {
-    marginLeft: 10,
+    marginLeft: 60,
+    width: 20,
+    height: 20,
+  },
+  deleteButtonGrid: {
+    position: 'absolute',
+    bottom: 5,
+    right: 5,
+
   },
   convertButton: {
     backgroundColor: '#007BFF',
@@ -236,8 +255,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'flex-start',
-    paddingVertical: 10,
-    paddingHorizontal: 10,
+    paddingVertical: 5,
+    paddingHorizontal: 5,
     width: '100%',
   },
 });
