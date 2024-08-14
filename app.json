@@ -18,13 +18,31 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.anonymous.VidoeConvert"
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-asset"
+      "expo-asset",
+      "expo-build-properties",
+
+      ["@config-plugins/ffmpeg-kit-react-native",
+      {
+        "package": "full",
+        "ios": {
+          "package": "full"
+        }
+      }
     ]
+      
+    ]
+
+
+
+
+
+    
   }
 }
