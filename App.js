@@ -3,6 +3,7 @@ import { StyleSheet, Text, View, TouchableOpacity, Alert, Dimensions, ScrollView
 import * as ImagePicker from 'expo-image-picker';
 import { Video } from 'expo-av';
 import * as FileSystem from 'expo-file-system';
+
 import { FFmpegKit, FFprobeKit } from 'ffmpeg-kit-react-native';
 import { MaterialIcons } from '@expo/vector-icons'; // Import MaterialIcons
 
@@ -17,7 +18,7 @@ export default function App() {
   const [isGridView, setIsGridView] = useState(false);
   const [progress, setProgress] = useState(0);
 
-  const pickVideo = async () => { 
+  const pickVideo = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
       alert('Sorry, we need media library permissions to make this work!');
@@ -37,16 +38,93 @@ export default function App() {
       if (newFiles.length < result.assets.length) {
         Alert.alert('Duplicate Files', 'Some files were already added.');
       }
+      const uri = result.assets[0].uri;
+      //console.log(videoFiles);
 
       LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
       setVideoFiles([...videoFiles, ...newFiles]);
     }
   };
 
-  const convertVideos = async () => {
-    console.log('try to convert');
-    console.log(aaaa);
+
+  const extractNameFromFileUrl = (uri, config) => {
+    const splittedUri = uri.split('/');
+    const fullName = splittedUri[splittedUri.length - 1];
+
+    const lastDotIndex = fullName.lastIndexOf('.');
+    const fileName = lastDotIndex !== -1 ? fullName.slice(0, lastDotIndex) : fullName;
+    const fileExtension = lastDotIndex !== -1 ? fullName.slice(lastDotIndex + 1) : undefined;
+
+    let newFileName = fileName.replace(/[^a-zA-Z0-9]/g, '_').replace(/\s+/g, '_');
+
+    if (config?.separateBoth) {
+      return {
+        name: newFileName,
+        extension: fileExtension,
+      };
+    }
+
+    if (config?.trimExt) {
+      return newFileName;
+    }
+
+    return fileExtension ? `${newFileName}.${fileExtension}` : newFileName;
   };
+
+
+  const convertVideos = async () => {
+
+    //console.log('Current videoFiles state:', videoFiles); // All Video File
+    if (videoFiles.length > 0) {
+      const uri = videoFiles[0].uri;
+      const { name, extension } = extractNameFromFileUrl(uri, {
+        separateBoth: true,
+      });
+
+       console.log('First video URI=:', uri);
+      const uniqueFileName = `${name}_${Date.now()}.${extension}`; // filename_1234787.mp4
+      console.log('uniqueFileName :', uniqueFileName);
+      const cacheDir = FileSystem.cacheDirectory;
+      console.log('Cash Directory ', cacheDir);
+      const uniqueFilePath = `${cacheDir}/${uniqueFileName}`;
+
+      console.log('uniqueFilePath ', uniqueFilePath);
+
+      await FileSystem.copyAsync({ from: uri, to: uniqueFilePath });
+      console.log('uniqueFilePath After copy: ', uniqueFilePath);
+      // Get media information
+        const mediaInfo = await FFprobeKit.getMediaInformation(uniqueFilePath);
+        const output = await mediaInfo.getOutput();
+        console.log('Output: ',output);
+      
+
+
+
+
+
+
+
+     // const output = await mediaInfo.getOutput();
+    
+
+      // const durationinMillis = JSON.parse(output).format.duration * 1000;
+      // console.log('Duration in Milisecond :', durationinMillis);
+
+     // const videoUris = videoFiles.map((fileurl) => fileurl.uri);// for all selected file path
+      
+      // console.log('Arrey:', videoFiles);
+      //console.log('Video URIs Multiple:', videoUris);
+
+    } else {
+      Alert.alert('No Videos', 'No videos have been selected.');
+    }
+  };
+  
+
+
+
+ 
+
 
   const deleteVideo = (uri) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
