@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, Alert, Dimensions, ScrollView, LayoutAnimation, UIManager, Platform } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Video } from 'expo-av';
+import * as FileSystem from 'expo-file-system';
+import { FFmpegKit, FFprobeKit } from 'ffmpeg-kit-react-native';
 import { MaterialIcons } from '@expo/vector-icons'; // Import MaterialIcons
 
 const windowWidth = Dimensions.get('window').width;
@@ -12,9 +14,10 @@ if (Platform.OS === 'android') {
 
 export default function App() {
   const [videoFiles, setVideoFiles] = useState([]);
-  const [isGridView, setIsGridView] = useState(false); // State to track layout type
+  const [isGridView, setIsGridView] = useState(false);
+  const [progress, setProgress] = useState(0);
 
-  const pickVideo = async () => {
+  const pickVideo = async () => { 
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
       alert('Sorry, we need media library permissions to make this work!');
@@ -23,10 +26,8 @@ export default function App() {
 
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Videos,
-      allowsMultipleSelection: true, // Enable multi-file selection
+      allowsMultipleSelection: true,
     });
-
-    console.log(result); // Log the result object
 
     if (!result.canceled && result.assets.length > 0) {
       const newFiles = result.assets.filter(
@@ -42,9 +43,9 @@ export default function App() {
     }
   };
 
-  const convertVideos = () => {
-    // Implement video conversion logic here
-    alert('Convert button pressed!');
+  const convertVideos = async () => {
+    console.log('try to convert');
+    console.log(aaaa);
   };
 
   const deleteVideo = (uri) => {
@@ -126,6 +127,9 @@ export default function App() {
         <TouchableOpacity style={styles.convertButton} onPress={convertVideos}>
           <Text style={styles.convertButtonText}>Convert</Text>
         </TouchableOpacity>
+      )}
+      {progress > 0 && (
+        <Text style={styles.progressText}>{progress}% Completed</Text>
       )}
     </View>
   );
