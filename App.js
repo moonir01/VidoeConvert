@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, Alert, Dimensions, ScrollView, LayoutAnimation, UIManager, Platform } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, Alert, Dimensions, ScrollView, LayoutAnimation, UIManager,PermissionsAndroid, Platform, Linking } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Video } from 'expo-av';
 import * as FileSystem from 'expo-file-system';
@@ -8,6 +8,8 @@ import { FFmpegKit, FFprobeKit } from 'ffmpeg-kit-react-native';
 import { MaterialIcons } from '@expo/vector-icons'; // Import MaterialIcons
 import * as MediaLibrary from 'expo-media-library';
 const windowWidth = Dimensions.get('window').width;
+
+
 
 if (Platform.OS === 'android') {
   UIManager.setLayoutAnimationEnabledExperimental && UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -84,8 +86,79 @@ export default function App() {
     return fileExtension ? `${newFileName}.${fileExtension}` : newFileName;
   };
 
+
+
+  async function requestStoragePermission() {
+    try {
+      if (Platform.OS === 'android') {
+        const granted = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
+          {
+            title: 'Storage Permission Required',
+            message: 'This app needs access to your storage to save files.',
+            buttonNeutral: 'Ask Me Later',
+            buttonNegative: 'Cancel',
+            buttonPositive: 'OK',
+          },
+        );
+  
+        if (granted === PermissionsAndroid.RESULTS.GRANTED) {
+          console.log('Storage permission granted');
+          // Proceed with your file operations
+          return true; // Permission granted
+        } else if (granted === PermissionsAndroid.RESULTS.DENIED) {
+          console.log('Storage permission denied');
+          Alert.alert(
+            'Permission Denied',
+            'You need to grant storage permission to save files.',
+            [
+              {
+                text: 'Retry',
+                onPress: requestStoragePermission, // Retry requesting permission
+              },
+              {
+                text: 'Open Settings',
+                onPress: () => Linking.openSettings(), // Open the app's settings
+              },
+              { text: 'Cancel', style: 'cancel' },
+            ],
+          );
+          return false; // Permission denied
+        } else if (granted === PermissionsAndroid.RESULTS.NEVER_ASK_AGAIN) {
+          console.log('Storage permission denied permanently');
+          Alert.alert(
+            'Permission Denied Permanently',
+            'You have permanently denied the storage permission. Please go to settings to enable it.',
+            [
+              {
+                text: 'Open Settings',
+                onPress: () => Linking.openSettings(), // Open the app's settings
+              },
+              { text: 'Cancel', style: 'cancel' },
+            ],
+          );
+          return false; // Permission denied permanently
+        }
+      }
+    } catch (err) {
+      console.warn(err);
+      return false;
+    }
+  }
+  
+
+
+
   
   const convertVideos = async () => {
+    requestStoragePermission();
+    const hasPermission = await requestStoragePermission();
+
+    if (!hasPermission) {
+      // If permission is not granted, stop the conversion process
+      return;
+    }
+
     if (videoFiles.length > 0) {
       const uri = videoFiles[0].uri;
       const { name, extension } = extractNameFromFileUrl(uri, {
