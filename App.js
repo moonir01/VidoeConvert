@@ -6,7 +6,7 @@ import * as FileSystem from 'expo-file-system';
 
 import { FFmpegKit, FFprobeKit } from 'ffmpeg-kit-react-native';
 import { MaterialIcons } from '@expo/vector-icons'; // Import MaterialIcons
-
+import * as MediaLibrary from 'expo-media-library';
 const windowWidth = Dimensions.get('window').width;
 
 if (Platform.OS === 'android') {
@@ -17,6 +17,19 @@ export default function App() {
   const [videoFiles, setVideoFiles] = useState([]);
   const [isGridView, setIsGridView] = useState(false);
   const [progress, setProgress] = useState(0);
+
+
+  const mapRange = (options) => {
+    const { value, inputMin, inputMax, outputMin, outputMax } = options;
+    const result =
+      ((value - inputMin) / (inputMax - inputMin)) * (outputMax - outputMin) +
+      outputMin;
+  
+    if (result === Infinity || result < outputMin) return outputMin;
+    if (result > outputMax) return outputMax;
+  
+    return result;
+  };
 
   const pickVideo = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -71,56 +84,65 @@ export default function App() {
     return fileExtension ? `${newFileName}.${fileExtension}` : newFileName;
   };
 
-
+  
   const convertVideos = async () => {
-
-    //console.log('Current videoFiles state:', videoFiles); // All Video File
     if (videoFiles.length > 0) {
       const uri = videoFiles[0].uri;
       const { name, extension } = extractNameFromFileUrl(uri, {
         separateBoth: true,
       });
-
-       console.log('First video URI=:', uri);
-      const uniqueFileName = `${name}_${Date.now()}.${extension}`; // filename_1234787.mp4
-      console.log('uniqueFileName :', uniqueFileName);
+  
+      const uniqueFileName = `${name}_${Date.now()}.${extension}`;
       const cacheDir = FileSystem.cacheDirectory;
-      console.log('Cash Directory ', cacheDir);
       const uniqueFilePath = `${cacheDir}/${uniqueFileName}`;
-
-      console.log('uniqueFilePath ', uniqueFilePath);
-
+  
       await FileSystem.copyAsync({ from: uri, to: uniqueFilePath });
-      console.log('uniqueFilePath After copy: ', uniqueFilePath);
-      // Get media information
-        const mediaInfo = await FFprobeKit.getMediaInformation(uniqueFilePath);
-        const output = await mediaInfo.getOutput();
-        console.log('Output: ',output);
-      
-
-
-
-
-
-
-
-     // const output = await mediaInfo.getOutput();
-    
-
-      // const durationinMillis = JSON.parse(output).format.duration * 1000;
-      // console.log('Duration in Milisecond :', durationinMillis);
-
-     // const videoUris = videoFiles.map((fileurl) => fileurl.uri);// for all selected file path
-      
-      // console.log('Arrey:', videoFiles);
-      //console.log('Video URIs Multiple:', videoUris);
-
+  
+      const mediaInfo = await FFprobeKit.getMediaInformation(uniqueFilePath);
+      const output = await mediaInfo.getOutput();
+      const durationinMillis = JSON.parse(output).format.duration * 1000;
+  
+      const uniqueOutputName = `${name}_${Date.now()}.mp3`;
+      const outputPath = `${FileSystem.documentDirectory}${uniqueOutputName}`;
+  
+      const command = `-i ${uniqueFilePath} -vn -acodec libmp3lame -qscale:a 2 ${outputPath}`;
+      await FFmpegKit.executeAsync(
+        command,
+        session => {},
+        log => {
+          log.getMessage();
+        },
+        statistics => {
+          const progress = Math.round(
+            mapRange({
+              value: statistics.getTime(),
+              inputMin: 0,
+              inputMax: durationinMillis,
+              outputMin: 0,
+              outputMax: 100,
+            }),
+          );
+          console.log(progress);
+          setProgress(progress);
+        },
+      );
+  
+      // Save the file to the Downloads folder
+      const asset = await MediaLibrary.createAssetAsync(outputPath);
+      const album = await MediaLibrary.getAlbumAsync('Download');
+  
+      if (album == null) {
+        await MediaLibrary.createAlbumAsync('Download', asset, false);
+      } else {
+        await MediaLibrary.addAssetsToAlbumAsync([asset], album, false);
+      }
+  
+      Alert.alert('Success', 'File saved to Downloads folder.');
     } else {
       Alert.alert('No Videos', 'No videos have been selected.');
     }
   };
   
-
 
 
  
