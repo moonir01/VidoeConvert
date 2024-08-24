@@ -139,16 +139,15 @@ export default function App() {
     }
   }
 
+
   const saveFile = async (uri) => {
     try {
       if (Platform.OS === "android") {
-        // Request permission to access storage if not already granted
         const hasPermission = await MediaLibrary.requestPermissionsAsync();
         if (hasPermission.granted) {
-          // Save file to the Movies or Downloads folder
           const asset = await MediaLibrary.createAssetAsync(uri);
           const album = await MediaLibrary.getAlbumAsync('Download');
-          
+  
           if (!album) {
             await MediaLibrary.createAlbumAsync('Download', asset, false);
           } else {
@@ -160,14 +159,15 @@ export default function App() {
           Alert.alert('Permission Denied', 'You need to grant storage permission to save files.');
         }
       } else {
-        // iOS export: Share the file using Sharing API
         await Sharing.shareAsync(uri);
       }
     } catch (error) {
       Alert.alert('Error', 'Failed to save the file.');
-      console.error(error);
+      console.error('Save File Error:', error); // Log the exact error
     }
   };
+  
+
 
   const convertVideos = async () => {
     if (videoFiles.length > 0) {
@@ -237,11 +237,17 @@ export default function App() {
   
   const handleExport = async () => {
     if (convertedVideoUri) {
-      await saveFile(convertedVideoUri);
+      try {
+        await saveFile(convertedVideoUri);
+      } catch (error) {
+        Alert.alert('Export Error', 'An error occurred while exporting the video.');
+        console.error(error);
+      }
     } else {
       Alert.alert('No Video', 'Please convert a video before exporting.');
     }
   };
+  
 
   return (
     <View style={styles.container}>
