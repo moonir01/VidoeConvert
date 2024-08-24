@@ -19,6 +19,7 @@
     "expo-file-system": "~17.0.1",
     "expo-image-picker": "~15.0.7",
     "expo-media-library": "~16.0.4",
+    "expo-sharing": "^12.0.1",
     "expo-status-bar": "~1.12.1",
     "expo-system-ui": "~3.0.7",
     "ffmpeg-kit-react-native": "^6.0.2",

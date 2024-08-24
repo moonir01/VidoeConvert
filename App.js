@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, Alert, Dimensions, ScrollView, LayoutAnimation, UIManager,PermissionsAndroid, Platform, Linking } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, Alert, Dimensions, ScrollView, LayoutAnimation, UIManager, PermissionsAndroid, Platform, Linking } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Video } from 'expo-av';
 import * as FileSystem from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
 
 import { FFmpegKit, FFprobeKit } from 'ffmpeg-kit-react-native';
 import { MaterialIcons } from '@expo/vector-icons'; // Import MaterialIcons
 import * as MediaLibrary from 'expo-media-library';
+
 const windowWidth = Dimensions.get('window').width;
-
-
 
 if (Platform.OS === 'android') {
   UIManager.setLayoutAnimationEnabledExperimental && UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -20,16 +20,15 @@ export default function App() {
   const [isGridView, setIsGridView] = useState(false);
   const [progress, setProgress] = useState(0);
 
-
   const mapRange = (options) => {
     const { value, inputMin, inputMax, outputMin, outputMax } = options;
     const result =
       ((value - inputMin) / (inputMax - inputMin)) * (outputMax - outputMin) +
       outputMin;
-  
+
     if (result === Infinity || result < outputMin) return outputMin;
     if (result > outputMax) return outputMax;
-  
+
     return result;
   };
 
@@ -54,13 +53,11 @@ export default function App() {
         Alert.alert('Duplicate Files', 'Some files were already added.');
       }
       const uri = result.assets[0].uri;
-      //console.log(videoFiles);
 
       LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
       setVideoFiles([...videoFiles, ...newFiles]);
     }
   };
-
 
   const extractNameFromFileUrl = (uri, config) => {
     const splittedUri = uri.split('/');
@@ -86,8 +83,6 @@ export default function App() {
     return fileExtension ? `${newFileName}.${fileExtension}` : newFileName;
   };
 
-
-
   async function requestStoragePermission() {
     try {
       if (Platform.OS === 'android') {
@@ -101,10 +96,9 @@ export default function App() {
             buttonPositive: 'OK',
           },
         );
-  
+
         if (granted === PermissionsAndroid.RESULTS.GRANTED) {
           console.log('Storage permission granted');
-          // Proceed with your file operations
           return true; // Permission granted
         } else if (granted === PermissionsAndroid.RESULTS.DENIED) {
           console.log('Storage permission denied');
@@ -145,43 +139,67 @@ export default function App() {
       return false;
     }
   }
-  
 
+  const saveFile = async (uri, filename, mimetype) => {
+    if (Platform.OS === "android") {
+      try {
+        const permissions = await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync();
 
+        if (permissions.granted) {
+          const base64 = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
 
-  
+          const validMimeType = mimetype || "application/octet-stream";
+          const newUri = await FileSystem.StorageAccessFramework.createFileAsync(
+            permissions.directoryUri, filename, validMimeType
+          );
+
+          await FileSystem.writeAsStringAsync(newUri, base64, { encoding: FileSystem.EncodingType.Base64 });
+
+          Alert.alert('Success', 'File saved successfully!');
+        } else {
+          Alert.alert('Permission Denied', 'Directory access permission was denied.');
+          Sharing.shareAsync(uri);
+        }
+      } catch (error) {
+        Alert.alert('Error', 'Failed to save the file.');
+        console.error(error);
+      }
+    } else {
+      Sharing.shareAsync(uri);
+    }
+  };
+
   const convertVideos = async () => {
     requestStoragePermission();
-    const hasPermission = await requestStoragePermission();
+    // const hasPermission = await requestStoragePermission();
 
-    if (!hasPermission) {
-      // If permission is not granted, stop the conversion process
-      return;
-    }
+    // if (!hasPermission) {
+    //   return;
+    // }
 
     if (videoFiles.length > 0) {
       const uri = videoFiles[0].uri;
       const { name, extension } = extractNameFromFileUrl(uri, {
         separateBoth: true,
       });
-  
+
       const uniqueFileName = `${name}_${Date.now()}.${extension}`;
       const cacheDir = FileSystem.cacheDirectory;
       const uniqueFilePath = `${cacheDir}/${uniqueFileName}`;
-  
+
       await FileSystem.copyAsync({ from: uri, to: uniqueFilePath });
-  
+
       const mediaInfo = await FFprobeKit.getMediaInformation(uniqueFilePath);
       const output = await mediaInfo.getOutput();
       const durationinMillis = JSON.parse(output).format.duration * 1000;
-  
+
       const uniqueOutputName = `${name}_${Date.now()}.mp3`;
       const outputPath = `${FileSystem.documentDirectory}${uniqueOutputName}`;
-  
+
       const command = `-i ${uniqueFilePath} -vn -acodec libmp3lame -qscale:a 2 ${outputPath}`;
       await FFmpegKit.executeAsync(
         command,
-        session => {},
+        session => { },
         log => {
           log.getMessage();
         },
@@ -199,27 +217,12 @@ export default function App() {
           setProgress(progress);
         },
       );
-  
-      // Save the file to the Downloads folder
-      const asset = await MediaLibrary.createAssetAsync(outputPath);
-      const album = await MediaLibrary.getAlbumAsync('Download');
-  
-      if (album == null) {
-        await MediaLibrary.createAlbumAsync('Download', asset, false);
-      } else {
-        await MediaLibrary.addAssetsToAlbumAsync([asset], album, false);
-      }
-  
-      Alert.alert('Success', 'File saved to Downloads folder.');
+
+      saveFile(outputPath, uniqueOutputName, 'audio/mp3');
     } else {
       Alert.alert('No Videos', 'No videos have been selected.');
     }
   };
-  
-
-
- 
-
 
   const deleteVideo = (uri) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -235,6 +238,7 @@ export default function App() {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setIsGridView(!isGridView);
   };
+
 
   return (
     <View style={styles.container}>
