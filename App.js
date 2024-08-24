@@ -4,7 +4,6 @@ import * as ImagePicker from 'expo-image-picker';
 import { Video } from 'expo-av';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
-
 import { FFmpegKit, FFprobeKit } from 'ffmpeg-kit-react-native';
 import { MaterialIcons } from '@expo/vector-icons'; // Import MaterialIcons
 import * as MediaLibrary from 'expo-media-library';
@@ -19,6 +18,7 @@ export default function App() {
   const [videoFiles, setVideoFiles] = useState([]);
   const [isGridView, setIsGridView] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [convertedVideoUri, setConvertedVideoUri] = useState(null); // Track the URI of the converted video
 
   const mapRange = (options) => {
     const { value, inputMin, inputMax, outputMin, outputMax } = options;
@@ -52,7 +52,6 @@ export default function App() {
       if (newFiles.length < result.assets.length) {
         Alert.alert('Duplicate Files', 'Some files were already added.');
       }
-      const uri = result.assets[0].uri;
 
       LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
       setVideoFiles([...videoFiles, ...newFiles]);
@@ -140,34 +139,36 @@ export default function App() {
     }
   }
 
-  const saveFile = async (uri, filename, mimetype) => {
-    if (Platform.OS === "android") {
-      try {
-        const permissions = await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync();
-
-        if (permissions.granted) {
-          const base64 = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
-
-          const validMimeType = mimetype || "application/octet-stream";
-          const newUri = await FileSystem.StorageAccessFramework.createFileAsync(
-            permissions.directoryUri, filename, validMimeType
-          );
-
-          await FileSystem.writeAsStringAsync(newUri, base64, { encoding: FileSystem.EncodingType.Base64 });
-
-          Alert.alert('Success', 'File saved successfully!');
+  const saveFile = async (uri) => {
+    try {
+      if (Platform.OS === "android") {
+        // Request permission to access storage if not already granted
+        const hasPermission = await MediaLibrary.requestPermissionsAsync();
+        if (hasPermission.granted) {
+          // Save file to the Movies or Downloads folder
+          const asset = await MediaLibrary.createAssetAsync(uri);
+          const album = await MediaLibrary.getAlbumAsync('Download');
+          
+          if (!album) {
+            await MediaLibrary.createAlbumAsync('Download', asset, false);
+          } else {
+            await MediaLibrary.addAssetsToAlbumAsync([asset], album.id, false);
+          }
+  
+          Alert.alert('Success', 'File saved to gallery successfully!');
         } else {
-          Alert.alert('Permission Denied', 'Directory access permission was denied.');
-          Sharing.shareAsync(uri);
+          Alert.alert('Permission Denied', 'You need to grant storage permission to save files.');
         }
-      } catch (error) {
-        Alert.alert('Error', 'Failed to save the file.');
-        console.error(error);
+      } else {
+        // iOS export: Share the file using Sharing API
+        await Sharing.shareAsync(uri);
       }
-    } else {
-      Sharing.shareAsync(uri);
+    } catch (error) {
+      Alert.alert('Error', 'Failed to save the file.');
+      console.error(error);
     }
   };
+
   const convertVideos = async () => {
     if (videoFiles.length > 0) {
       const uri = videoFiles[0].uri;
@@ -187,7 +188,6 @@ export default function App() {
 
       const uniqueOutputName = `${name}_${Date.now()}_modified.mp4`;
       const outputPath = `${FileSystem.documentDirectory}${uniqueOutputName}`;
-      //const outputPath = `${FileSystem.documentDirectory}${uniqueOutputName}`;
       const command = `-i ${uniqueFilePath} -af "atempo=1.02,bass=g=4:f=80:w=3,treble=g=4:f=3200:w=3,firequalizer=gain_entry='entry(0,0);entry(62,2);entry(125,1.5);entry(250,1);entry(500,1);entry(1000,1);entry(2000,1.5);entry(4000,2.5);entry(8000,3);entry(16000,4)',compand=attacks=0.05:decays=0.25:points=-80/-80-50/-15-30/-10-10/-2:soft-knee=4:gain=2,deesser,highpass=f=35,lowpass=f=17000,loudnorm=I=-16:LRA=11:TP=-1.5,volume=3.9dB" -c:v copy -c:a aac -b:a 224k -ar 48000 ${outputPath}`;
 
       await FFmpegKit.executeAsync(
@@ -211,12 +211,12 @@ export default function App() {
         },
       );
 
-      saveFile(outputPath, uniqueOutputName, 'video/mp4');
+      // Update state with the URI of the converted video
+      setConvertedVideoUri(outputPath);
     } else {
       Alert.alert('No Videos', 'No videos have been selected.');
     }
   };
-
 
   const deleteVideo = (uri) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -234,6 +234,15 @@ export default function App() {
   };
 
 
+  
+  const handleExport = async () => {
+    if (convertedVideoUri) {
+      await saveFile(convertedVideoUri);
+    } else {
+      Alert.alert('No Video', 'Please convert a video before exporting.');
+    }
+  };
+
   return (
     <View style={styles.container}>
       <Text style={styles.header}>Video Converter App</Text>
@@ -242,12 +251,10 @@ export default function App() {
         <TouchableOpacity style={styles.selectButton} onPress={pickVideo}>
           <Text style={styles.addButtonText}>Select Video</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.selectButton} onPress={{}}>
-          <Text style={styles.addButtonText}>Output</Text>
+        <TouchableOpacity style={styles.selectButton} onPress={handleExport}>
+          <Text style={styles.addButtonText}>Export</Text>
         </TouchableOpacity>
       </View>
-
-
 
       <View style={styles.headerContainer}>
         <Text style={styles.videoCount}>Total Videos: {videoFiles.length}</Text>
@@ -420,7 +427,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 5,
     right: 5,
-
   },
   convertButton: {
     backgroundColor: '#007BFF',
@@ -458,4 +464,3 @@ const styles = StyleSheet.create({
     marginRight: 5,
   },
 });
-
