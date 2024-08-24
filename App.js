@@ -168,15 +168,7 @@ export default function App() {
       Sharing.shareAsync(uri);
     }
   };
-
   const convertVideos = async () => {
-    //requestStoragePermission();
-    // const hasPermission = await requestStoragePermission();
-
-    // if (!hasPermission) {
-    //   return;
-    // }
-
     if (videoFiles.length > 0) {
       const uri = videoFiles[0].uri;
       const { name, extension } = extractNameFromFileUrl(uri, {
@@ -193,10 +185,11 @@ export default function App() {
       const output = await mediaInfo.getOutput();
       const durationinMillis = JSON.parse(output).format.duration * 1000;
 
-      const uniqueOutputName = `${name}_${Date.now()}.mp3`;
+      const uniqueOutputName = `${name}_${Date.now()}_modified.mp4`;
       const outputPath = `${FileSystem.documentDirectory}${uniqueOutputName}`;
+      //const outputPath = `${FileSystem.documentDirectory}${uniqueOutputName}`;
+      const command = `-i ${uniqueFilePath} -af "atempo=1.02,bass=g=4:f=80:w=3,treble=g=4:f=3200:w=3,firequalizer=gain_entry='entry(0,0);entry(62,2);entry(125,1.5);entry(250,1);entry(500,1);entry(1000,1);entry(2000,1.5);entry(4000,2.5);entry(8000,3);entry(16000,4)',compand=attacks=0.05:decays=0.25:points=-80/-80-50/-15-30/-10-10/-2:soft-knee=4:gain=2,deesser,highpass=f=35,lowpass=f=17000,loudnorm=I=-16:LRA=11:TP=-1.5,volume=3.9dB" -c:v copy -c:a aac -b:a 224k -ar 48000 ${outputPath}`;
 
-      const command = `-i ${uniqueFilePath} -vn -acodec libmp3lame -qscale:a 2 ${outputPath}`;
       await FFmpegKit.executeAsync(
         command,
         session => { },
@@ -218,11 +211,12 @@ export default function App() {
         },
       );
 
-      saveFile(outputPath, uniqueOutputName, 'audio/mp3');
+      saveFile(outputPath, uniqueOutputName, 'video/mp4');
     } else {
       Alert.alert('No Videos', 'No videos have been selected.');
     }
   };
+
 
   const deleteVideo = (uri) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -243,9 +237,18 @@ export default function App() {
   return (
     <View style={styles.container}>
       <Text style={styles.header}>Video Converter App</Text>
-      <TouchableOpacity style={styles.addButton} onPress={pickVideo}>
-        <Text style={styles.addButtonText}>Select or Browse Videos</Text>
-      </TouchableOpacity>
+
+      <View style={styles.buttonContainer}>
+        <TouchableOpacity style={styles.selectButton} onPress={pickVideo}>
+          <Text style={styles.addButtonText}>Select Video</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.selectButton} onPress={{}}>
+          <Text style={styles.addButtonText}>Output</Text>
+        </TouchableOpacity>
+      </View>
+
+
+
       <View style={styles.headerContainer}>
         <Text style={styles.videoCount}>Total Videos: {videoFiles.length}</Text>
         {videoFiles.length > 0 && (
@@ -439,6 +442,20 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     paddingHorizontal: 5,
     width: '100%',
+  },
+  buttonContainer: {
+    flexDirection: 'row', // Arrange buttons in a row
+    justifyContent: 'space-between', // Space out the buttons
+    width: '100%',
+    marginBottom: 10,
+  },
+  selectButton: {
+    flex: 1, // Make each button take up equal space
+    backgroundColor: '#007BFF',
+    padding: 15,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginRight: 5,
   },
 });
 
